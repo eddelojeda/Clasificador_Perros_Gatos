@@ -65,7 +65,7 @@
 
     (async() => {
       console.log("Cargando modelo...");
-      modelo = await tf.loadLayersModel("model.json");
+      modelo = await tf.loadLayersModel("model2.json");
       console.log("Modelo cargado");
     })();
 
@@ -133,11 +133,11 @@
 
     function predecir() {
       if (modelo != null) {
-        resample_single(canvas, 100, 100, otrocanvas);
+        resample_single(canvas, 80, 80, otrocanvas);
 
         //Hacer la predicción
         var ctx2 = otrocanvas.getContext("2d");
-        var imgData = ctx2.getImageData(0,0, 100, 100);
+        var imgData = ctx2.getImageData(0,0, 80, 80);
 
         var arr = [];
         var arr100 = [];
