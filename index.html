@@ -20,6 +20,16 @@
       border-radius: 10px;
       margin-top: 1rem;
     }
+    #cambiarCamara {
+      margin: 1rem 0;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
     #resultado, #probabilidades {
       margin-top: 1rem;
       font-size: 1.5rem;
@@ -39,12 +49,13 @@
   <h1>Clasificador de Perros y Gatos 🐶🐱</h1>
   <video id="video" autoplay playsinline width="300"></video>
   
+  <button id="cambiarCamara">Cambiar cámara</button>
+
   <div class="prediction-container">
     <div id="resultado">Esperando predicción...</div>
     <div id="probabilidades"></div>
   </div>
 
-  <!-- Canvas oculto para capturar frames -->
   <canvas id="canvas" width="300" height="300" style="display:none;"></canvas>
   <canvas id="canvas2" width="100" height="100" style="display:none;"></canvas>
 
@@ -56,8 +67,11 @@
     const ctx2 = canvas2.getContext('2d');
     const resultadoDiv = document.getElementById('resultado');
     const probabilidadesDiv = document.getElementById('probabilidades');
+    const cambiarCamaraBtn = document.getElementById('cambiarCamara');
 
     let modelo;
+    let usarCamaraFrontal = true;
+    let currentStream;
 
     async function cargarModelo() {
       try {
@@ -70,12 +84,25 @@
     }
 
     async function iniciarCamara() {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: usarCamaraFrontal ? 'user' : 'environment',
+          width: { ideal: 300 },
+          height: { ideal: 300 }
+        }
+      };
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        currentStream = stream;
         video.srcObject = stream;
 
         video.onloadedmetadata = () => {
-          setInterval(predecir, 1000); 
+          video.play();
         };
       } catch (error) {
         console.error("❌ No se pudo acceder a la cámara:", error);
@@ -84,7 +111,7 @@
     }
 
     function predecir() {
-      if (!modelo) return;
+      if (!modelo || video.readyState !== 4) return;
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       ctx2.drawImage(canvas, 0, 0, 100, 100);
@@ -104,26 +131,31 @@
       const tensor = tf.tensor(input, [1, 100, 100, 1]);
       const prediction = modelo.predict(tensor);
 
-      prediction.array().then((scores) => {
-        const [perro, gato] = scores[0];
-        if (isNaN(perro) && isNaN(gato)) {
+      prediction.array().then(([scores]) => {
+        const [perro, gato] = scores;
+        if (isNaN((perro * 100).toFixed(2)) && isNaN((gato * 100).toFixed(2))) {
           resultadoDiv.innerText = `⚠️ Predicción no válida`;
-        } else if (isNaN(perro)) {
+        } else if (isNaN((perro * 100).toFixed(2))) {
           resultadoDiv.innerText = `🐱 Es un Gato`;
-        } else if (isNaN(gato)) {
+        } else if (isNaN((gato * 100).toFixed(2))) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
-        } else if (perro > 0.5) {
+        } else if ((perro * 100).toFixed(2) > 0.5) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
         } else {
           resultadoDiv.innerText = `🐱 Es un Gato`;
         }
-
       });
     }
+
+    cambiarCamaraBtn.addEventListener('click', async () => {
+      usarCamaraFrontal = !usarCamaraFrontal;
+      await iniciarCamara();
+    });
 
     async function main() {
       await cargarModelo();
       await iniciarCamara();
+      setInterval(predecir, 1000);
     }
 
     main();
