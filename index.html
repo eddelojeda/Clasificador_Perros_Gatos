@@ -132,14 +132,14 @@
       const prediction = modelo.predict(tensor);
 
       prediction.array().then(([scores]) => {
-        const [perro, gato] = scores;
-        if (isNaN((perro * 100).toFixed(2)) && isNaN((gato * 100).toFixed(2))) {
+        const [perro, gato] = scores[0];
+        if (isNaN(perro) && isNaN(gato)) {
           resultadoDiv.innerText = `⚠️ Predicción no válida`;
-        } else if (isNaN((perro * 100).toFixed(2))) {
+        } else if (isNaN(perro)) {
           resultadoDiv.innerText = `🐱 Es un Gato`;
-        } else if (isNaN((gato * 100).toFixed(2))) {
+        } else if (isNaN(gato)) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
-        } else if ((perro * 100).toFixed(2) > 0.5) {
+        } else if (perro * 100 > 0.5) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
         } else {
           resultadoDiv.innerText = `🐱 Es un Gato`;
