@@ -112,21 +112,25 @@
           resultadoDiv.innerText = `🐱 Es un Gato`;
         } else if (isNaN(gato)) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
-        } else if (perro > gato) {
+        } else if (perro > 0.5) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
         } else {
           resultadoDiv.innerText = `🐱 Es un Gato`;
         }
-
-        probabilidadesDiv.innerHTML =
-          `🐶 Perro: ${(perro * 100).toFixed(1)}%<br>🐱 Gato: ${(gato * 100).toFixed(1)}%`;
       });
     }
 
     async function main() {
+      await setupCamera(currentDeviceId);
       await cargarModelo();
-      await iniciarCamara();
     }
+
+    function changeCamera() {
+      currentDeviceId = currentDeviceId === 'user' ? 'environment' : 'user';
+      setupCamera(currentDeviceId);
+    }
+
+    changeCameraButton.addEventListener('click', changeCamera);
 
     main();
   </script>
