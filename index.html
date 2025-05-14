@@ -106,7 +106,13 @@
 
       prediction.array().then((scores) => {
         const [perro, gato] = scores[0];
-        if (perro > gato) {
+        if (isNaN(perro) && isNaN(gato)) {
+          resultadoDiv.innerText = `⚠️ Predicción no válida`;
+        } else if (isNaN(perro)) {
+          resultadoDiv.innerText = `🐱 Es un Gato`;
+        } else if (isNaN(gato)) {
+          resultadoDiv.innerText = `🐶 Es un Perro`;
+        } else if (perro > gato) {
           resultadoDiv.innerText = `🐶 Es un Perro`;
         } else {
           resultadoDiv.innerText = `🐱 Es un Gato`;
