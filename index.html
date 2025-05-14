@@ -44,10 +44,9 @@
     <div id="probabilidades"></div>
   </div>
 
+  <!-- Canvas oculto para capturar frames -->
   <canvas id="canvas" width="300" height="300" style="display:none;"></canvas>
   <canvas id="canvas2" width="100" height="100" style="display:none;"></canvas>
-
-  <button id="changeCamera">Cambiar cámara</button>
 
   <script>
     const video = document.getElementById('video');
@@ -57,34 +56,8 @@
     const ctx2 = canvas2.getContext('2d');
     const resultadoDiv = document.getElementById('resultado');
     const probabilidadesDiv = document.getElementById('probabilidades');
-    const changeCameraButton = document.getElementById('changeCamera');
 
     let modelo;
-    let currentStream;
-    let currentDeviceId = 'user';
-
-    async function setupCamera(deviceId) {
-      // Detener la cámara anterior si existe
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
-
-      // Obtener nueva cámara
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: deviceId }
-      });
-      video.srcObject = stream;
-      currentStream = stream;
-
-      return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-          resolve(video);
-          setInterval(() => {
-            predecir();
-          }, 2000);
-        };
-      });
-    }
 
     async function cargarModelo() {
       try {
@@ -144,20 +117,14 @@
         } else {
           resultadoDiv.innerText = `🐱 Es un Gato`;
         }
+
       });
     }
 
     async function main() {
-      await setupCamera(currentDeviceId);
       await cargarModelo();
+      await iniciarCamara();
     }
-
-    function changeCamera() {
-      currentDeviceId = currentDeviceId === 'user' ? 'environment' : 'user';
-      setupCamera(currentDeviceId);
-    }
-
-    changeCameraButton.addEventListener('click', changeCamera);
 
     main();
   </script>
