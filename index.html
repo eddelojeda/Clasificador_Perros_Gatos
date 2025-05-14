@@ -132,7 +132,7 @@
       const prediction = modelo.predict(tensor);
 
       prediction.array().then(([scores]) => {
-        const [perro, gato] = scores[0];
+        const [perro, gato] = scores;
         if (isNaN(perro) && isNaN(gato)) {
           resultadoDiv.innerText = `⚠️ Predicción no válida`;
         } else if (isNaN(perro)) {
