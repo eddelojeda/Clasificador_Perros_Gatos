@@ -1,83 +1,163 @@
-<!DOCTYPE html>
+<!-- index.html (modificado) -->
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Clasificador de Perros y Gatos</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
-</head>
-<body>
-  <h1>Clasificador de Perros y Gatos</h1>
-  <video id="video" autoplay playsinline width="300"></video>
-  <p id="prediction">Esperando predicción...</p>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <title>Perros y Gatos</title>
 
-  <canvas id="canvas" width="300" height="300" style="display:none;"></canvas>
-  <canvas id="canvas2" width="100" height="100" style="display:none;"></canvas>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-  <script>
-    const video = document.getElementById('video');
-    const canvas = document.getElementById('canvas');
-    const canvas2 = document.getElementById('canvas2');
-    const ctx = canvas.getContext('2d');
-    const ctx2 = canvas2.getContext('2d');
-    const predictionElement = document.getElementById('prediction');
+    <style>
+      #resultado {
+        font-weight: bold;
+        font-size: 6rem;
+        text-align: center;
+      }
+      #modelo-status {
+        text-align: center;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    
+    <main>
+      <div class="px-4 py-2 my-2 text-center border-bottom">
+        <img class="d-block mx-auto mb-2" src="Logo.png" alt="" width="80" height="80">
+        <h1 class="display-5 fw-bold">Perros y gatos</h1>
+        <div class="col-lg-6 mx-auto">
+          <p class="lead mb-0">Clasificaci&oacute;n de im&aacute;genes (Perro o Gato) usando la c&aacute;mara web utilizando Tensorflow.js</p>
+        </div>
+      </div>
 
-    let model;
+      <div class="b-example-divider"></div>
 
-    async function setupCamera() {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true
-      });
-      video.srcObject = stream;
-      return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-          resolve(video);
-          setInterval(() => {
-            predecir();
-          }, 2000);
-        };
-      });
-    }
+      <div class="container mt-5">
+        <div class="row">
+          <div class="col-12 col-md-4 offset-md-4 text-center">
+            <div id="modelo-status">Cargando modelo...</div>
+            <video id="video" playsinline autoplay style="width: 1px;"></video>
+            <button class="btn btn-primary mb-2" id="cambiar-camara" onclick="cambiarCamara();">Cambiar camara</button>
+            <canvas id="canvas" width="400" height="400" style="max-width: 100%;"></canvas>
+            <canvas id="otrocanvas" width="80" height="80" style="display: none"></canvas>
+            <div id="resultado"></div>            
+          </div>
+        </div>
+      </div>
 
-    async function cargarModelo() {
-      model = await tf.loadLayersModel('model.json');
-      console.log('Modelo cargado');
-    }
+      <div class="b-example-divider"></div>
+      <div class="b-example-divider mb-0"></div>
+    </main>
 
-    function predecir() {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      ctx2.drawImage(canvas, 0, 0, 100, 100);
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 
-      const imageData = ctx2.getImageData(0, 0, 100, 100);
-      const data = imageData.data;
-      const input = [];
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.16.0/dist/tf.min.js"></script>
 
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        // Convertir a escala de grises
-        const gray = (r + g + b) / 3 / 255;
-        input.push(gray);
+    <script type="text/javascript">
+      const tamano = 400;
+      const video = document.getElementById("video");
+      const canvas = document.getElementById("canvas");
+      const otrocanvas = document.getElementById("otrocanvas");
+      const ctx = canvas.getContext("2d");
+      let currentStream = null;
+      let facingMode = "user";
+      let modelo = null;
+
+      (async () => {
+        try {
+          console.log("Cargando modelo...");
+          modelo = await tf.loadLayersModel("/model.json");
+          console.log("Modelo cargado");
+          document.getElementById("modelo-status").innerHTML = "✅ Modelo cargado correctamente";
+        } catch (err) {
+          console.error("Error al cargar el modelo:", err);
+          document.getElementById("modelo-status").innerHTML = "❌ Error al cargar el modelo";
+        }
+      })();
+
+      window.onload = function () {
+        mostrarCamara();
       }
 
-      const tensor = tf.tensor(input, [1, 100, 100, 1]);
-      const prediction = model.predict(tensor);
-      prediction.array().then((scores) => {
-        const [perro, gato] = scores[0];
-        if (perro > gato) {
-          predictionElement.innerText = `🐶 Perro (${(perro * 100).toFixed(1)}%)`;
+      function mostrarCamara() {
+        const opciones = {
+          audio: false,
+          video: {
+            width: tamano, height: tamano
+          }
+        };
+
+        if (navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia(opciones)
+            .then(function (stream) {
+              currentStream = stream;
+              video.srcObject = currentStream;
+              procesarCamara();
+              predecir();
+            })
+            .catch(function (err) {
+              alert("No se pudo utilizar la camara :(");
+              console.log(err);
+              alert(err);
+            });
         } else {
-          predictionElement.innerText = `🐱 Gato (${(gato * 100).toFixed(1)}%)`;
+          alert("No existe la funcion getUserMedia");
         }
-      });
-    }
+      }
 
-    async function main() {
-      await setupCamera();
-      await cargarModelo();
-    }
+      function cambiarCamara() {
+        if (currentStream) {
+          currentStream.getTracks().forEach(track => track.stop());
+        }
 
-    main();
-  </script>
-</body>
+        facingMode = facingMode === "user" ? "environment" : "user";
+
+        const opciones = {
+          audio: false,
+          video: {
+            facingMode: facingMode, width: tamano, height: tamano
+          }
+        };
+
+        navigator.mediaDevices.getUserMedia(opciones)
+          .then(function (stream) {
+            currentStream = stream;
+            video.srcObject = currentStream;
+          })
+          .catch(function (err) {
+            console.log("Oops, hubo un error", err);
+          });
+      }
+
+      function procesarCamara() {
+        ctx.drawImage(video, 0, 0, tamano, tamano);
+        setTimeout(procesarCamara, 20);
+      }
+
+      function predecir() {
+        if (modelo != null) {
+          let ctx2 = otrocanvas.getContext("2d");
+          ctx2.drawImage(canvas, 0, 0, 80, 80);
+
+          let imgData = ctx2.getImageData(0, 0, 80, 80);
+          let input = tf.browser.fromPixels(imgData)
+            .toFloat()
+            .div(tf.scalar(255))
+            .expandDims(); // shape: [1, 80, 80, 3]
+
+          let output = modelo.predict(input);
+          let index = output.argMax(-1).dataSync()[0];
+
+          let etiquetas = ["Gato", "Perro"];
+          document.getElementById("resultado").innerHTML = etiquetas[index];
+        }
+
+        setTimeout(predecir, 150);
+      }
+    </script>
+  </body>
 </html>
